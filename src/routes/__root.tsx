@@ -1,4 +1,5 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
 
@@ -29,11 +30,11 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "KantinChain — Loyalty Digital Kantin Kampus" },
+      { name: "description", content: "Kumpulkan stempel lintas tenant kantin kampus dan tukar dengan reward menarik." },
+      { name: "author", content: "KantinChain" },
+      { property: "og:title", content: "KantinChain — Loyalty Digital Kantin Kampus" },
+      { property: "og:description", content: "Kumpulkan stempel lintas tenant kantin kampus dan tukar dengan reward menarik." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
@@ -58,6 +59,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <Toaster position="top-center" richColors />
         <Scripts />
       </body>
     </html>
