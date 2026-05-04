@@ -14,7 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          nama: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          nama: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nama?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
+      stamps: {
+        Row: {
+          jumlah: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          jumlah?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          jumlah?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tenants: {
+        Row: {
+          created_at: string
+          id: string
+          nama: string
+          owner_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nama: string
+          owner_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nama?: string
+          owner_id?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          id: string
+          jumlah: number
+          tanggal: string
+          tenant_id: string | null
+          tipe: Database["public"]["Enums"]["tx_type"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          jumlah?: number
+          tanggal?: string
+          tenant_id?: string | null
+          tipe: Database["public"]["Enums"]["tx_type"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          jumlah?: number
+          tanggal?: string
+          tenant_id?: string | null
+          tipe?: Database["public"]["Enums"]["tx_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +117,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      app_role: "mahasiswa" | "tenant" | "admin"
+      tx_type: "earn" | "redeem"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +245,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["mahasiswa", "tenant", "admin"],
+      tx_type: ["earn", "redeem"],
+    },
   },
 } as const
