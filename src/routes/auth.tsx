@@ -51,7 +51,12 @@ function AuthPage() {
         await goToDashboard(data.user.id);
       }
     } catch (err: any) {
-      toast.error(err.message || "Terjadi kesalahan");
+      const msg = err.message || "";
+      let friendly = msg;
+      if (/invalid login credentials/i.test(msg)) friendly = "Email atau password salah";
+      else if (/already registered|already exists/i.test(msg)) friendly = "Email sudah terdaftar, silakan masuk";
+      else if (/password.*(short|6)/i.test(msg)) friendly = "Password minimal 6 karakter";
+      toast.error(friendly || "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
