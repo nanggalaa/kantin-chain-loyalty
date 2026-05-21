@@ -51,7 +51,12 @@ function AuthPage() {
         await goToDashboard(data.user.id);
       }
     } catch (err: any) {
-      toast.error(err.message || "Terjadi kesalahan");
+      const msg = err.message || "";
+      let friendly = msg;
+      if (/invalid login credentials/i.test(msg)) friendly = "Email atau password salah";
+      else if (/already registered|already exists/i.test(msg)) friendly = "Email sudah terdaftar, silakan masuk";
+      else if (/password.*(short|6)/i.test(msg)) friendly = "Password minimal 6 karakter";
+      toast.error(friendly || "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
@@ -95,6 +100,7 @@ function AuthPage() {
           <div>
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="h-12 rounded-xl" />
+            <p className="text-xs text-muted-foreground mt-1">Minimal 6 karakter, bebas huruf atau angka.</p>
           </div>
           <Button type="submit" disabled={loading} className="w-full h-12 rounded-xl text-base" style={{ background: "var(--gradient-warm)" }}>
             {loading ? "Memproses..." : mode === "login" ? "Masuk" : "Daftar"}
