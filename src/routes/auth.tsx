@@ -100,6 +100,7 @@ function AuthPage() {
           <div>
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="h-12 rounded-xl" />
+            <p className="text-xs text-muted-foreground mt-1">Minimal 6 karakter, bebas huruf atau angka.</p>
           </div>
           <Button type="submit" disabled={loading} className="w-full h-12 rounded-xl text-base" style={{ background: "var(--gradient-warm)" }}>
             {loading ? "Memproses..." : mode === "login" ? "Masuk" : "Daftar"}
