@@ -38,6 +38,10 @@ export const Route = createRootRoute({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "KantinChain — Loyalty Digital Kantin Kampus" },
+      { name: "twitter:description", content: "Kumpulkan stempel lintas tenant kantin kampus dan tukar dengan reward menarik." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8158fd72-e77e-4e5b-b0ca-ce1d60ed48f6/id-preview-dc57d5f6--b27be3bf-f0ce-465c-8b4d-e6b97bd2104a.lovable.app-1779349662519.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8158fd72-e77e-4e5b-b0ca-ce1d60ed48f6/id-preview-dc57d5f6--b27be3bf-f0ce-465c-8b4d-e6b97bd2104a.lovable.app-1779349662519.png" },
     ],
     links: [
       {
