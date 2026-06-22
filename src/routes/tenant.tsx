@@ -91,7 +91,7 @@ function TenantDashboard() {
           <h1 className="text-xl font-bold mt-0.5 leading-tight">{tenantNama || "Kantin Anda"}</h1>
           <p className="text-xs text-muted-foreground mt-1">Kelola loyalty pelanggan kantin Anda</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={logout} className="shrink-1 mt-1">
+        <Button variant="ghost" size="icon" onClick={logout} className="shrink mt-1">
           <LogOut className="w-5 h-5" />
         </Button>
       </header>
@@ -256,7 +256,7 @@ function TenantDashboard() {
       {/* Tips */}
       <section className="px-6 mt-8">
         <div className="bg-accent/40 rounded-2xl p-4 flex items-start gap-3" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-1 mt-0.5">
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink mt-0.5">
             <Lightbulb className="w-4 h-4" />
           </div>
           <div className="flex-1">
