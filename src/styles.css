@@ -34,40 +34,127 @@
 }
 
 :root {
-  --radius: 1rem;
-  --background: oklch(0.985 0.01 75);
-  --foreground: oklch(0.22 0.04 50);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.04 50);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.04 50);
-  --primary: oklch(0.68 0.18 45);
-  --primary-foreground: oklch(0.99 0.01 75);
-  --primary-glow: oklch(0.78 0.16 60);
-  --secondary: oklch(0.95 0.03 70);
-  --secondary-foreground: oklch(0.3 0.05 50);
-  --muted: oklch(0.95 0.02 70);
-  --muted-foreground: oklch(0.52 0.03 60);
-  --accent: oklch(0.92 0.06 80);
-  --accent-foreground: oklch(0.3 0.05 50);
-  --destructive: oklch(0.6 0.22 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.65 0.16 150);
-  --success-foreground: oklch(0.99 0 0);
-  --border: oklch(0.9 0.02 70);
-  --input: oklch(0.92 0.02 70);
-  --ring: oklch(0.68 0.18 45);
-  --gradient-warm: linear-gradient(135deg, oklch(0.68 0.18 45), oklch(0.78 0.16 60));
-  --shadow-card: 0 4px 20px -8px oklch(0.5 0.1 50 / 0.25);
-  --shadow-stamp: 0 8px 32px -10px oklch(0.68 0.18 45 / 0.45);
+  --radius: 0.875rem;
+
+  /* Base */
+  --background: #ffffff;
+  --foreground: #0F172A;
+  --card: #ffffff;
+  --card-foreground: #0F172A;
+  --popover: #ffffff;
+  --popover-foreground: #0F172A;
+
+  /* Solana brand */
+  --primary: #9945FF;
+  --primary-foreground: #ffffff;
+  --secondary: #F8FAFC;
+  --secondary-foreground: #0F172A;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --accent: #F0FDF4;
+  --accent-foreground: #0F172A;
+
+  /* Semantic */
+  --destructive: #EF4444;
+  --destructive-foreground: #ffffff;
+  --success: #14F195;
+  --success-foreground: #0F172A;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #9945FF;
+
+  /* Solana gradients */
+  --gradient-solana: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+  --gradient-solana-soft: linear-gradient(135deg, rgba(153,69,255,0.12) 0%, rgba(20,241,149,0.12) 100%);
+  --gradient-solana-text: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+  --gradient-hero-bg: linear-gradient(180deg, #ffffff 0%, #F8FAFC 100%);
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 10px 40px -12px rgba(153,69,255,0.2), 0 4px 16px -4px rgba(0,0,0,0.08);
+  --shadow-nav: 0 1px 0 0 rgba(0,0,0,0.06), 0 4px 20px -4px rgba(0,0,0,0.06);
+  --shadow-button: 0 4px 20px -4px rgba(153,69,255,0.5);
+  --shadow-glow: 0 0 40px rgba(153,69,255,0.15), 0 0 80px rgba(20,241,149,0.08);
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-display);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* Solana gradient text utility */
+.text-gradient-solana {
+  background: var(--gradient-solana-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Solana gradient background utility */
+.bg-gradient-solana {
+  background: var(--gradient-solana);
+}
+
+.bg-gradient-solana-soft {
+  background: var(--gradient-solana-soft);
+}
+
+/* Glow effect */
+.shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Card hover transition */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(3deg); }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-float-slow { animation: float-slow 6s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 20s linear infinite; }
+
+/* Gradient border */
+.border-gradient-solana {
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+.border-gradient-solana::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: var(--gradient-solana);
+  z-index: -1;
 }
