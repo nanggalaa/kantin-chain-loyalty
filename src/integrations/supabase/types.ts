@@ -82,6 +82,8 @@ export type Database = {
           tenant_id: string | null
           tipe: Database["public"]["Enums"]["tx_type"]
           user_id: string
+          tx_hash: string | null
+          blockchain_status: string
         }
         Insert: {
           id?: string
@@ -90,6 +92,8 @@ export type Database = {
           tenant_id?: string | null
           tipe: Database["public"]["Enums"]["tx_type"]
           user_id: string
+          tx_hash?: string | null
+          blockchain_status?: string
         }
         Update: {
           id?: string
@@ -98,6 +102,8 @@ export type Database = {
           tenant_id?: string | null
           tipe?: Database["public"]["Enums"]["tx_type"]
           user_id?: string
+          tx_hash?: string | null
+          blockchain_status?: string
         }
         Relationships: [
           {
