@@ -35,6 +35,38 @@ export type Database = {
         }
         Relationships: []
       }
+      qr_sessions: {
+        Row: {
+          id: string
+          tenant_id: string
+          status: string
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          status?: string
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          status?: string
+          expires_at?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stamps: {
         Row: {
           jumlah: number

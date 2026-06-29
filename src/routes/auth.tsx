@@ -21,7 +21,9 @@ function AuthPage() {
 
   const goToDashboard = async (uid: string) => {
     const { data: p } = await supabase.from("profiles").select("role").eq("id", uid).maybeSingle();
-    navigate({ to: p?.role === "tenant" ? "/tenant" : "/dashboard" });
+    if (p?.role === "tenant") navigate({ to: "/tenant" });
+    else if (p?.role === "admin") navigate({ to: "/admin" });
+    else navigate({ to: "/dashboard" });
   };
 
   const handle = async (e: React.FormEvent) => {

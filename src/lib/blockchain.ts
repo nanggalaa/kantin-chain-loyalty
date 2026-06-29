@@ -3,14 +3,14 @@
  * ─────────────────────────────────────────────────────────────
  * Layer blockchain KantinChain — Solana Devnet.
  *
- * Saat ini semua fungsi record* menggunakan dummy hash.
- * Ketika siap integrasi penuh, cukup ganti implementasi
  * recordEarnTransaction() dan recordRedeemTransaction()
- * tanpa mengubah caller di dashboard maupun tenant.
+ * memanggil Supabase Edge Function "record-transaction"
+ * yang mengirim transaksi Solana asli ke Devnet.
  * ─────────────────────────────────────────────────────────────
  */
 
 import { Connection, clusterApiUrl } from "@solana/web3.js";
+import { supabase } from "@/integrations/supabase/client";
 
 /* ── Config ──────────────────────────────────────────────── */
 
@@ -64,11 +64,8 @@ export function getExplorerUrl(signature: string): string {
 /* ── Dummy hash ──────────────────────────────────────────── */
 
 /**
- * Generate dummy tx hash sementara selama integrasi penuh belum aktif.
- * Format: SOL_DEV_<32 karakter random>
- *
- * TODO: Hapus fungsi ini setelah recordEarnTransaction /
- *       recordRedeemTransaction menggunakan transaksi Solana asli.
+ * @deprecated Tidak lagi dipakai — Edge Function menghasilkan
+ * signature Solana asli. Dibiarkan untuk backward compat sementara.
  */
 export function generateDummyHash(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
@@ -78,61 +75,75 @@ export function generateDummyHash(): string {
   return `SOL_DEV_${rand}`;
 }
 
+/* ── Invoke Edge Function helper ─────────────────────────── */
+
+/**
+ * Memanggil Supabase Edge Function "record-transaction"
+ * dan menormalisasi response menjadi BlockchainResult.
+ */
+async function invokeRecordTransaction(
+  payload: Record<string, unknown>,
+): Promise<BlockchainResult> {
+  const { data, error } = await supabase.functions.invoke("record-transaction", {
+    body: payload,
+  });
+
+  // Error level transport (network/CORS/auth)
+  if (error) {
+    throw new Error(`Edge Function invoke error: ${error.message ?? JSON.stringify(error)}`);
+  }
+
+  // Edge Function mengembalikan { success: false, error: "..." }
+  if (!data?.success) {
+    throw new Error(`Edge Function failed: ${data?.error ?? "Unknown error"}`);
+  }
+
+  // Edge Function response shape: { success, signature, explorer }
+  const signature: string = data.signature;
+  if (!signature) {
+    throw new Error("Edge Function tidak mengembalikan signature");
+  }
+
+  const explorerUrl: string = data.explorer ?? getExplorerUrl(signature);
+
+  return {
+    success: true,
+    txHash: signature,       // signature Solana asli
+    status: "confirmed",     // Edge Function hanya return saat sudah confirmed
+    explorerUrl,
+  };
+}
+
 /* ── Record Earn ─────────────────────────────────────────── */
 
 /**
- * Mencatat transaksi earn stamp ke blockchain.
- *
- * Status saat ini: DUMMY — mengembalikan hash palsu.
- *
- * TODO: Implementasi asli akan:
- *   1. Buat keypair ephemeral atau gunakan wallet tenant.
- *   2. Build & send transaksi memo ke Solana Devnet.
- *   3. Tunggu konfirmasi lalu kembalikan signature asli.
- *
- * @param params - userId, tenantId, jumlah stamp
- * @returns BlockchainResult dengan txHash dan explorerUrl
+ * Mencatat transaksi earn stamp ke Solana Devnet
+ * melalui Supabase Edge Function "record-transaction".
  */
 export async function recordEarnTransaction(
   params: EarnParams
 ): Promise<BlockchainResult> {
-  // Stub — simulasi async seperti transaksi asli nantinya
-  await Promise.resolve();
-
-  const txHash = generateDummyHash();
-
-  return {
-    success: true,
-    txHash,
-    status: "confirmed",
-    explorerUrl: getExplorerUrl(txHash),
-  };
+  return invokeRecordTransaction({
+    type: "earn",
+    userId: params.userId,
+    tenantId: params.tenantId,
+    jumlah: params.jumlah,
+  });
 }
 
 /* ── Record Redeem ───────────────────────────────────────── */
 
 /**
- * Mencatat transaksi redeem reward ke blockchain.
- *
- * Status saat ini: DUMMY — mengembalikan hash palsu.
- *
- * TODO: Implementasi asli sama dengan recordEarnTransaction
- *       namun dengan data memo yang berbeda (tipe: redeem).
- *
- * @param params - userId, jumlah stamp yang diredeem
- * @returns BlockchainResult dengan txHash dan explorerUrl
+ * Mencatat transaksi redeem reward ke Solana Devnet
+ * melalui Supabase Edge Function "record-transaction".
  */
 export async function recordRedeemTransaction(
   params: RedeemParams
 ): Promise<BlockchainResult> {
-  await Promise.resolve();
-
-  const txHash = generateDummyHash();
-
-  return {
-    success: true,
-    txHash,
-    status: "confirmed",
-    explorerUrl: getExplorerUrl(txHash),
-  };
+  return invokeRecordTransaction({
+    type: "redeem",
+    userId: params.userId,
+    tenantId: null,
+    jumlah: params.jumlah,
+  });
 }

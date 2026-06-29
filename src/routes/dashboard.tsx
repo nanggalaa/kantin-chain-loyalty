@@ -29,6 +29,7 @@ import {
   ExternalLink,
   Layers,
   Copy,
+  Store,
 } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
@@ -51,6 +52,11 @@ type Reward = {
   title: string;
   desc: string;
   Icon: React.ComponentType<{ className?: string }>;
+};
+
+type Tenant = {
+  id: string;
+  nama: string;
 };
 
 /* ── Constants ── */
@@ -77,6 +83,9 @@ function Dashboard() {
   const [busy, setBusy] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Tx | null>(null);
+  const [tenantList, setTenantList] = useState<Tenant[]>([]);
+  const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
+  const [selectedRedeemTenant, setSelectedRedeemTenant] = useState<Tenant | null>(null);
 
   /* ── Load data ── */
   const load = useCallback(async (uid: string) => {
@@ -91,9 +100,16 @@ function Dashboard() {
         .limit(20),
     ]);
     if (profile?.role === "tenant") { navigate({ to: "/tenant" }); return; }
+    const txArr = (tx as any) ?? [];
+    console.log("[LOAD] transactions received:", {
+      count: txArr.length,
+      firstId: txArr[0]?.id ?? null,
+      firstTxHash: txArr[0]?.tx_hash ?? null,
+      firstBlockchainStatus: txArr[0]?.blockchain_status ?? null,
+    });
     setNama(profile?.nama ?? "");
     setStamps(stamp?.jumlah ?? 0);
-    setTxs((tx as any) ?? []);
+    setTxs(txArr);
   }, [navigate]);
 
   useEffect(() => {
@@ -101,6 +117,10 @@ function Dashboard() {
       if (!data.session) { navigate({ to: "/auth" }); return; }
       setUserId(data.session.user.id);
       load(data.session.user.id);
+    });
+    // Fetch daftar tenant untuk dialog redeem
+    supabase.from("tenants").select("id, nama").order("nama").then(({ data }) => {
+      setTenantList((data as Tenant[]) ?? []);
     });
   }, [navigate, load]);
 
@@ -119,21 +139,7 @@ function Dashboard() {
         return;
       }
 
-      // 2. Rule: 1 stamp per user per hari
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const { data: existing } = await supabase
-        .from("transactions").select("id")
-        .eq("user_id", userId).eq("tipe", "earn")
-        .gte("tanggal", todayStart.toISOString()).limit(1);
-      if (existing && existing.length > 0) {
-        toast.warning("Sudah mendapat stamp hari ini.", {
-          description: "Anda hanya bisa mendapatkan 1 stamp per hari.",
-        });
-        return;
-      }
-
-      // 3. Tambah stamp +1
+      // 2. Tambah stamp +1
       const newTotal = stamps + 1;
       const { error: stampErr } = await supabase
         .from("stamps")
@@ -141,7 +147,7 @@ function Dashboard() {
         .eq("user_id", userId);
       if (stampErr) throw stampErr;
 
-      // 4. Insert transaksi (awalnya status pending)
+      // 3. Insert transaksi (awalnya status pending)
       const { data: newTx, error: txErr } = await supabase
         .from("transactions")
         .insert({
@@ -153,21 +159,47 @@ function Dashboard() {
         })
         .select("id")
         .single();
-      if (txErr) throw txErr;
+      if (txErr) {
+        console.error("[INSERT] transactions error:", JSON.stringify(txErr, null, 2));
+        throw txErr;
+      }
+      console.log("[INSERT] transactions earn:", {
+        data: newTx,
+        error: txErr,
+        newTx: newTx,
+        id: newTx?.id ?? null,
+      });
 
       setStamps(newTotal);
       toast.success("Berhasil mendapatkan 1 stamp.", {
         description: `Dari ${tenant.nama}. Terus kumpulkan untuk redeem reward!`,
       });
 
-      // 5. Catat ke blockchain (tidak menghentikan proses jika gagal)
+      // 4. Catat ke blockchain (tidak menghentikan proses stamp jika gagal)
       try {
         const result = await recordEarnTransaction({ userId, tenantId, jumlah: 1 });
-        await supabase
+        console.log("[BLOCKCHAIN] Update earn", {
+          txId: newTx.id,
+          txHash: result.txHash,
+          status: result.status,
+        });
+        const { data: updatedRows, error: updateErr } = await supabase
           .from("transactions")
           .update({ tx_hash: result.txHash, blockchain_status: result.status })
-          .eq("id", newTx.id);
-      } catch {
+          .eq("id", newTx.id)
+          .select("id, tx_hash, blockchain_status");
+        if (updateErr) {
+          console.error("[BLOCKCHAIN] UPDATE ERROR", JSON.stringify(updateErr, null, 2));
+        } else {
+          console.log("[BLOCKCHAIN] UPDATE earn result:", {
+            txId: newTx.id,
+            txHash: result.txHash,
+            rowsAffected: updatedRows?.length ?? 0,
+            returnedRows: updatedRows,
+          });
+        }
+      } catch (blockchainErr: any) {
+        console.error("[blockchain] recordEarnTransaction error:", blockchainErr?.message ?? blockchainErr);
         await supabase
           .from("transactions")
           .update({ blockchain_status: "failed" })
@@ -183,9 +215,10 @@ function Dashboard() {
   }, [userId, stamps, load]);
 
   /* ── Redeem reward ── */
-  const handleRedeem = async () => {
+  const handleRedeem = async (tenantId: string) => {
     if (!userId) return;
     if (stamps < REDEEM_COST) { toast.error(`Butuh ${REDEEM_COST} stamp untuk redeem.`); return; }
+    setRedeemDialogOpen(false);
     setBusy(true);
     try {
       const newTotal = stamps - REDEEM_COST;
@@ -194,25 +227,57 @@ function Dashboard() {
         .eq("user_id", userId);
       if (e1) throw e1;
 
-      // Insert transaksi dulu (pending)
+      // Insert transaksi dengan tenant_id yang dipilih mahasiswa
       const { data: newTx, error: e2 } = await supabase
         .from("transactions")
-        .insert({ user_id: userId, tipe: "redeem", jumlah: REDEEM_COST, blockchain_status: "pending" })
+        .insert({
+          user_id: userId,
+          tenant_id: tenantId,
+          tipe: "redeem",
+          jumlah: REDEEM_COST,
+          blockchain_status: "pending",
+        })
         .select("id")
         .single();
-      if (e2) throw e2;
+      if (e2) {
+        console.error("[INSERT] transactions redeem error:", JSON.stringify(e2, null, 2));
+        throw e2;
+      }
+      console.log("[INSERT] transactions redeem:", {
+        data: newTx,
+        error: e2,
+        newTx: newTx,
+        id: newTx?.id ?? null,
+      });
 
       setStamps(newTotal);
       toast.success("🎁 Reward berhasil ditukar!", { description: "Tunjukkan ke kantin favoritmu." });
 
-      // Catat ke blockchain (tidak menghentikan proses jika gagal)
+      // Catat ke blockchain (tidak menghentikan proses stamp jika gagal)
       try {
         const result = await recordRedeemTransaction({ userId, jumlah: REDEEM_COST });
-        await supabase
+        console.log("[BLOCKCHAIN] Update redeem", {
+          txId: newTx.id,
+          txHash: result.txHash,
+          status: result.status,
+        });
+        const { data: updatedRows, error: updateErr } = await supabase
           .from("transactions")
           .update({ tx_hash: result.txHash, blockchain_status: result.status })
-          .eq("id", newTx.id);
-      } catch {
+          .eq("id", newTx.id)
+          .select("id, tx_hash, blockchain_status");
+        if (updateErr) {
+          console.error("[BLOCKCHAIN] UPDATE ERROR", JSON.stringify(updateErr, null, 2));
+        } else {
+          console.log("[BLOCKCHAIN] UPDATE redeem result:", {
+            txId: newTx.id,
+            txHash: result.txHash,
+            rowsAffected: updatedRows?.length ?? 0,
+            returnedRows: updatedRows,
+          });
+        }
+      } catch (blockchainErr: any) {
+        console.error("[blockchain] recordRedeemTransaction error:", blockchainErr?.message ?? blockchainErr);
         await supabase
           .from("transactions")
           .update({ blockchain_status: "failed" })
@@ -311,7 +376,7 @@ function Dashboard() {
             <span className="text-sm font-bold">Scan QR</span>
             <span className="text-[11px] font-normal text-white/80">Dapatkan stamp</span>
           </button>
-          <button onClick={handleRedeem} disabled={busy || stamps < REDEEM_COST}
+          <button onClick={() => setRedeemDialogOpen(true)} disabled={busy || stamps < REDEEM_COST}
             className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-[#E2E8F0] bg-white py-5 transition-all hover:border-[#9945FF]/30 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             style={{ boxShadow: "var(--shadow-card)" }}>
             <Gift className="h-7 w-7 text-[#9945FF] transition-transform group-hover:scale-110" />
@@ -319,6 +384,53 @@ function Dashboard() {
             <span className="text-[11px] text-[#64748B]">{stamps < REDEEM_COST ? `Butuh ${REDEEM_COST - stamps} stamp lagi` : `${REDEEM_COST} stamp`}</span>
           </button>
         </section>
+
+        {/* Dialog Pilih Tenant untuk Redeem */}
+        <Dialog open={redeemDialogOpen} onOpenChange={(open) => {
+          setRedeemDialogOpen(open);
+          if (!open) setSelectedRedeemTenant(null);
+        }}>
+          <DialogContent className="max-w-sm rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="text-[#0F172A]">Pilih Kantin untuk Redeem</DialogTitle>
+            </DialogHeader>
+            <p className="text-xs text-[#64748B] -mt-1">Pilih kantin tempat kamu ingin menukar {REDEEM_COST} stamp menjadi reward.</p>
+            {tenantList.length === 0 ? (
+              <p className="py-6 text-center text-sm text-[#64748B]">Belum ada kantin terdaftar.</p>
+            ) : (
+              <ul className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+                {tenantList.map((t) => (
+                  <li key={t.id}>
+                    <button
+                      onClick={() => setSelectedRedeemTenant(t)}
+                      className={`w-full flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-all ${
+                        selectedRedeemTenant?.id === t.id
+                          ? "border-[#9945FF] bg-[#9945FF]/5"
+                          : "border-[#E2E8F0] hover:border-[#9945FF]/40 hover:bg-[#F8FAFC]"
+                      }`}
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl" style={{ background: "var(--gradient-solana-soft)" }}>
+                        <Store className="h-4 w-4 text-[#9945FF]" />
+                      </div>
+                      <span className="text-sm font-semibold text-[#0F172A]">{t.nama}</span>
+                      {selectedRedeemTenant?.id === t.id && (
+                        <CheckCircle2 className="ml-auto h-4 w-4 text-[#9945FF] shrink-0" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              onClick={() => selectedRedeemTenant && handleRedeem(selectedRedeemTenant.id)}
+              disabled={!selectedRedeemTenant || busy}
+              className="mt-2 w-full rounded-2xl py-3 text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "var(--gradient-solana)", boxShadow: "var(--shadow-button)" }}
+            >
+              {busy ? "Memproses..." : `Tukar ${REDEEM_COST} Stamp di ${selectedRedeemTenant?.nama ?? "..."}`}
+            </button>
+          </DialogContent>
+        </Dialog>
 
         {/* Reward Tersedia */}
         <section className="mt-8">
